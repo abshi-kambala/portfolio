@@ -1,19 +1,17 @@
-# All the imports!
+# Imports
 import tensorflow as tf # tested with 1.14.0
 import numpy as np # tested with 1.16.4
 import matplotlib.pyplot as plt #tested with 3.0.3
 from sklearn.metrics import classification_report # tested with 0.21.2l
 
-# Supress deprecation warnings
+# deprecation warnings
 import logging
 logging.getLogger('tensorflow').disabled = True
 
-# Fetch "Fashion MNIST" data
+# Fetch Fashion MNIST data
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.fashion_mnist.load_data()
 
-# A good rule of thumb is to normalise input values - i.e. transform them to a
-# scale of 0 to 1. Each element in this dataset is a pixel value of 0 to 255, so
-# we'll normalise / rescale these values.
+# Normalize / rescale these values.
 x_train = x_train / 255.0
 x_test = x_test / 255.0
 
@@ -29,10 +27,8 @@ from keras import regularizers
 model = Sequential()
 weight_decay = 0.0005
 
-# regularizer.l2
-# BatchNormalization
-# Dropout
 
+# Regulizer, Dropout layers, MaxPooling layers
 model.add(Conv2D(64, (3, 3), padding='same',
                     input_shape=(28,28,1),kernel_regularizer=regularizers.l2(weight_decay)))
 model.add(Activation('relu'))
@@ -121,32 +117,27 @@ model.compile(
     metrics=['accuracy'] # reporting metric
 )
 
-# Display a summary of the models structure
+# Model structure summary
 print(model.summary())
 
 # tf.keras.utils.plot_model(model, to_file='model.png', show_shapes=True, show_layer_names=True)
 
-# Add an empty color dimension as the Convolutional net is expecting this
+# empty color dimension
 x_train = np.expand_dims(x_train, -1)
 x_test = np.expand_dims(x_test, -1)
 
-# Train the CNN on the training data
+# Train the CNN
 history = model.fit(
 
       # Training data : features (images) and classes.
       x_train, y_train,
 
-      # number of samples to work through before updating the
-      # internal model parameters via back propagation.
+      # number of samples to work through before backpropagation
       batch_size=256,
 
-      # An epoch is an iteration over the entire training data.
       epochs=10,
 
-      # The model will set apart his fraction of the training
-      # data, will not train on it, and will evaluate the loss
-      # and any model metrics on this data at the end of
-      # each epoch.
+      # validation split (20% of data for testing)
       validation_split=0.2,
 
       verbose=1)
@@ -202,7 +193,6 @@ for j, incorrect in enumerate(incorrect[0:8]):
 
 '''
 # Getting the model without the last layers, trained with imagenet and with average pooling
-# K means tf.keras.
 K = tf.keras
 base_model = K.applications.vgg16.VGG16(include_top=False,
     weights='imagenet',
@@ -215,10 +205,8 @@ base_model = K.applications.resnet50.ResNet50(include_top=False,
     pooling='avg',
     input_shape=(32,32,3)
 )
-# Notice that L2 to L13 replaces the convolutional layer (i.e. Conv2D function)
-# above. This is because we are not building our own convolutional layer. Instead
-# we are taking the advantage of VGG16.
-
+# VGG16 transfer learning
+ 
 # create the new model applying the base_model (VGG16)
 model= K.Sequential()
 model.add(base_model)
@@ -231,7 +219,7 @@ model.add(K.layers.Dense(512, activation=('relu')))
 model.add(K.layers.Dropout(0.2))
 model.add(K.layers.Dense(10, activation=('softmax')))
 
-# Compiling model with adam optimizer and looking the accuracy
+# Compiling model with adam
 # model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 # history = model.fit(
 #             x=X_train, y=y_train,
@@ -245,7 +233,7 @@ model.add(K.layers.Dense(10, activation=('softmax')))
 x_train_resized = tf.image.resize(x_train, (32, 32))  # Resize the images from 28x28 to 32x32
 x_train_resized = tf.image.grayscale_to_rgb(x_train_resized)  # Convert grayscale to RGB
 
-# Compiling model with adam optimizer and looking the accuracy
+# Compiling model
 model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 history = model.fit(
             x=x_train_resized, y=y_train,
@@ -255,4 +243,5 @@ history = model.fit(
             epochs=30,
             verbose=1
         )
+
 '''
