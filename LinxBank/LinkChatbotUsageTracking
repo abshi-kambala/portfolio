@@ -1,0 +1,83 @@
+# Usage tracking
+USAGE_FILE = "usage_log.json"
+DAILY_SEARCH_LIMIT = 20
+DAILY_CHAT_LIMIT = 30
+RATE_LIMIT_WINDOW_SECONDS = 60
+SEARCH_RATE_LIMIT_PER_MIN = 3
+CHAT_RATE_LIMIT_PER_MIN = 5
+
+app = FastAPI()
+chat_history = []
+
+# Models
+class QueryModel(BaseModel):
+    query: str
+
+# Usage Tracking
+def load_usage():
+    try:
+        if os.path.exists(USAGE_FILE):
+            with open(USAGE_FILE, 'r') as f:
+                data = json.load(f)
+                print("[DEBUG] Loaded usage file:", data)
+                return data
+    except Exception as e:
+        print("[ERROR] Failed loading usage file:", e)
+    return {
+        "date": datetime.now(timezone.utc).strftime('%Y-%m-%d'),
+        "search_count": 0,
+        "chat_count": 0,
+        "search_timestamps": [],
+        "chat_timestamps": []
+    }
+
+def save_usage(data):
+    try:
+        with open(USAGE_FILE, 'w') as f:
+            json.dump(data, f)
+        print("[DEBUG] Saved usage:", data)
+    except Exception as e:
+        print("[ERROR] Failed saving usage:", e)
+
+def clean_old_timestamps(timestamps):
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=RATE_LIMIT_WINDOW_SECONDS)
+    new_list = [t for t in timestamps if datetime.fromisoformat(t) > cutoff]
+    print("[DEBUG] Timestamps cleaned. Before:", len(timestamps), "After:", len(new_list))
+    return new_list
+
+def check_and_update_usage(request_type):
+    usage = load_usage()
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    if usage["date"] != today:
+        print("[DEBUG] RESETTING USAGE.")
+        usage = {
+            "date": today,
+            "search_count": 0,
+            "chat_count": 0,
+            "search_timestamps": [],
+            "chat_timestamps": []
+        }
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    if request_type == "search":
+        usage["search_timestamps"] = clean_old_timestamps(usage["search_timestamps"])
+        if len(usage["search_timestamps"]) >= SEARCH_RATE_LIMIT_PER_MIN:
+            return False, "Search rate limit exceeded. Please wait a few minutes and retry."
+        if usage["search_count"] >= DAILY_SEARCH_LIMIT:
+            return False, "Daily search limit reached. Please try again tomorrow. I apologize for the inconvenience."
+        usage["search_timestamps"].append(now_iso)
+        usage["search_count"] += 1
+        print("[DEBUG] Search usage updated:", usage)
+
+    elif request_type == "chat":
+        usage["chat_timestamps"] = clean_old_timestamps(usage["chat_timestamps"])
+        if len(usage["chat_timestamps"]) >= CHAT_RATE_LIMIT_PER_MIN:
+            return False, "Chat rate limit exceeded. Please wait a few minutes and retry."
+        if usage["chat_count"] >= DAILY_CHAT_LIMIT:
+            return False, "Daily chat limit reached. Please try again tomorrow. I apologize for the inconvenience."
+        usage["chat_timestamps"].append(now_iso)
+        usage["chat_count"] += 1
+        print("[DEBUG] Chat usage updated:", usage)
+
+    save_usage(usage)
+    return True, None
