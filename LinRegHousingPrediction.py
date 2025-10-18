@@ -1,4 +1,4 @@
-## Your Code Starts Here ##
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -38,4 +38,5 @@ lm = LinearRegression()
 lm.fit = lm.fit(X_train, y_train)
 lm.coef_
 RMSE = (mean_squared_error(y_test, lm.predict(X_test)))**(1/2)
+
 RMSE
